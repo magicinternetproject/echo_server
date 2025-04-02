@@ -1,13 +1,17 @@
 use bytes::Bytes;
 use mini_redis::{Connection, Frame};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use tokio::net::{TcpListener, TcpStream};
 
 type Db = Arc<Mutex<HashMap<String, Bytes>>>;
 
 #[tokio::main]
 async fn main() {
+    let mut i = 0;
+    let mutex = Mutex::new(i);
+    increment_and_do_stuff(&mutex).await;
+
     let listener = TcpListener::bind("127.0.0.1:6379").await.unwrap();
     println!("listening!");
     let db = Arc::new(Mutex::new(HashMap::new()));
@@ -50,4 +54,16 @@ async fn process(socket: TcpStream, db: Db) {
 
 	connection.write_frame(&response).await.unwrap();
     }
+}
+
+async fn do_something_async(s: String) {
+    println!("{}", s);
+}
+
+async fn increment_and_do_stuff(mutex: &Mutex<i32>) {
+    let mut lock: MutexGuard<i32> = mutex.lock().unwrap();
+    *lock += 1;
+    // drop(lock);
+
+    do_something_async("SEEMS TO WORK".to_string()).await;
 }
